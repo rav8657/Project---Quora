@@ -18,32 +18,22 @@ const userSchema = new mongoose.Schema({
         trim: true,
         unique: true
     },
-    profileImage: {
-        type: String,
-        required: true,
-        trim: true
-    },
+  
     phone: {
         type: String,
-        required: true,
         trim: true,
         unique: true
     },
 
     password: { type: String, required: true },
 
-    address: {
-        shipping: {
-            street: { type: String, required: true },
-            city: { type: String, required: true },
-            pincode: { type: Number, required: true }
-        },
-        billing: {
-            street: { type: String, required: true },
-            city: { type: String, required: true },
-            pincode: { type: Number, required: true }
-        }
-    },
-}, { timestamps: true });
+    creditScore :{type:Number, default:500},
 
-module.exports = mongoose.model('User_Project5', userSchema)
+    createdAt:{type: Date,default: Date.now},
+
+    updatedAt:{type:Date, default:Date.now}
+
+ 
+});
+
+module.exports = mongoose.model('User_Project6', userSchema)

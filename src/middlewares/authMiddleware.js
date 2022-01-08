@@ -12,7 +12,7 @@ const userAuth = async (req, res, next) => {
 
         let T = token.split(' ')
         //console.log(T)
-        let timeOut = jwt.decode(T[1], 'Hercules')
+        let timeOut = jwt.decode(T[1], 'HerculesProject6')
 
 
         if (!timeOut) {

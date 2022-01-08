@@ -1,49 +1,19 @@
-const aws = require('aws-sdk')
 const userModel = require('../models/userModel')
 const validator = require('../validators/validator')
 const bcrypt = require('bcrypt')
 const saltRounds = 10;
 const jwt = require('jsonwebtoken')
 
-//!....................AWS S3 PART.............................
 
-aws.config.update({
-    accessKeyId: "AKIAY3L35MCRRMC6253G",// id
-    secretAccessKey: "88NOFLHQrap/1G2LqUy9YkFbFRe/GNERsCyKvTZA", // your secret password
-    region: "ap-south-1", // Mumbai region
-})
-
-const uploadFile = async (file) => {
-    return new Promise(function (resolve, reject) {
-// Create S3 service object
-        const s3 = new aws.S3({ apiVersion: "2006-03-01" })
-
-        const uploadParams = {
-            ACL: "public-read",// this file is publically readable
-            Bucket: "classroom-training-bucket", //A bucket is a container for objects to store an object in Amazon S3.
-            Key: "Hercules/User/" + new Date() + file.originalname,
-            Body: file.buffer,
-        }
-
-        s3.upload(uploadParams, function (err, data) {
-            if (err) {
-                return reject({ "error": err });
-            }
-            return resolve(data.Location)
-        });
-    });
-};
-//!..................................................................
 //creating user by validating every details.
 
 const register = async function (req, res) {
     try {
-        let files = req.files
-
+        
         let requestBody = req.body
 
         //Extract body
-        let { fname, lname, email, phone, password, address, profileImage } = requestBody
+        let { fname, lname, email, phone, password } = requestBody
 
         //-------Validation Starts-----------
 
@@ -72,11 +42,12 @@ const register = async function (req, res) {
         if (isEmailAlredyPresent) {
             return res.status(400).send({ status: false, message: `Email Already Present` });
         }
-        //phone = phone.trim()
-        if (!validator.isValid(phone)) {
+       
+        if (!validator.validString(phone)) {
             return res.status(400).send({ status: false, message: "Invalid request parameter, please provide Phone" });
         }
         //validating phone number of 10 digits only.
+        if(phone ){
         if (!/^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6789]\d{9}$/.test(phone)) {
             return res.status(400).send({ status: false, message: `Mobile should be a valid number` });
         }
@@ -85,6 +56,7 @@ const register = async function (req, res) {
         if (isPhoneAlredyPresent) {
             return res.status(400).send({ status: false, message: `Phone Number Already Present` });
         }
+    }
         if (!validator.isValid(password)) {
             return res.status(400).send({ status: false, message: "Invalid request parameter, please provide password" });
         }
@@ -92,74 +64,13 @@ const register = async function (req, res) {
             return res.status(400).send({ status: false, message: "Password should be Valid min 8 and max 15 " });
         }
 
-        if (!validator.isValid(address)) {
-            return res.status(400).send({ status: false, message: "Address is required" });
-        }
-
-        // Shipping Adress validation
-        if (address.shipping) {
-            if (address.shipping.street) {
-                if (!validator.isValidRequestBody(address.shipping.street)) {
-                    return res.status(400).send({ status: false, message: 'Shipping Street Required' });
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. Shipping street cannot be empty" });
-            }
-            if (address.shipping.city) {
-                if (!validator.isValidRequestBody(address.shipping.city)) {
-                    return res.status(400).send({ status: false, message: 'Shipping city is Required' });
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. Shipping city cannot be empty" });
-            }
-            if (address.shipping.pincode) {
-                if (!validator.isValidRequestBody(address.shipping.pincode)) {
-                    return res.status(400).send({ status: false, message: 'Shipping pincode Required' });
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. Shipping pincode cannot be empty" })
-            }
-        } else { return res.status(400).send({ status: false, message: "Invalid request parameters, Shipping address cannot be empty" }) }
-
-        // Billing Adress validation
-
-        if (address.billing) {
-            if (address.billing.street) {
-                if (!validator.isValidRequestBody(address.billing.street)) {
-                    return res.status(400).send({ status: false, message: 'billing Street Required' })
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. billing Street cannot be empty" })
-            }
-            if (address.billing.city) {
-                if (!validator.isValidRequestBody(address.billing.city)) {
-                    return res.status(400).send({ status: false, message: 'billing city Required' })
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. billing city cannot be empty" })
-            }
-            if (address.billing.pincode) {
-                if (!validator.isValidRequestBody(address.billing.pincode)) {
-                    return res.status(400).send({ status: false, message: 'billing pincode Required' })
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. billing pincode cannot be empty" })
-            }
-        } else { return res.status(400).send({ status: false, message: "Invalid request parameters, Billing address cannot be empty" }) }
-
-
-        if (!(files && files.length > 0)) {
-            return res.status(400).send({ status: false, message: "Invalid request parameter, please provide profile image" })
-        }
-
         //------------Validation Ends----------
 
-        profileImage = await uploadFile(files[0]); //uploading image to AWS
 
         password = await bcrypt.hash(password, saltRounds); //encrypting password by using bcrypt.
 
         //object destructuring for response body.
-        const udatedBody = { fname, lname, email, phone, password, address, profileImage }
+        const udatedBody = { fname, lname, email, phone, password }
 
         let user = await userModel.create(udatedBody)
 
@@ -226,7 +137,7 @@ const login = async (req, res) => {
             userId: user._id,
             iat: Math.floor(Date.now() / 1000),   //time of issuing the token.
             exp: Math.floor(Date.now() / 1000) + 3600 * 24 * 7 //+ 60 * 30 setting token expiry time limit.
-        }, 'Hercules')
+        }, 'HerculesProject6')
 
 
         res.header("BearerToken", token);
@@ -245,7 +156,7 @@ const getUserProfile = async (req, res) => {
 
     try {
         const userId = req.params.userId
-        //const userIdFromToken = req.userId
+        const userIdFromToken = req.userId
 
         //validation starts
 
@@ -260,13 +171,13 @@ const getUserProfile = async (req, res) => {
                 status: false, message: `User doesn't exists by ${userId}`
             })
         }
-        //Checking the authorization of the user -> Whether user's Id matches with the book creater's Id or not.
-        // if (userIdFromToken != findUserProfile._id) {
-        //     return res.status(403).send({
-        //         status: false,
-        //         message: "Unauthorized access."
-        //     })
-        // }
+        //Checking the authorization of the user -> Whether user's Id matches with the creater's Id or not.
+        if (userIdFromToken != findUserProfile._id) {
+            return res.status(403).send({
+                status: false,
+                message: "Unauthorized access."
+            })
+        }
 
         return res.status(200).send({ status: true, message: "Profile found successfully.", data: findUserProfile })
     } catch (err) {
@@ -285,7 +196,7 @@ const getUserProfile = async (req, res) => {
 const updateUserProfile = async (req, res) => {
 
     try {
-        let files = req.files
+       
         let requestBody = req.body
         let userId = req.params.userId
         let userIdFromToken = req.userId
@@ -312,17 +223,13 @@ const updateUserProfile = async (req, res) => {
             return
         }
         // Extract params
-        let { fname, lname, email, phone, password, address, profileImage } = requestBody;
+        let { fname, lname, email, phone } = requestBody;
 
         //validations for updatation details.
         if (!validator.validString(fname)) {
             return res.status(400).send({ status: false, message: 'fname is Required' })
         }
-        if (fname) {
-            if (!validator.isValid(fname)) {
-                return res.status(400).send({ status: false, message: "Invalid request parameter, please provide fname" })
-            }
-        }
+        
         if (!validator.validString(lname)) {
             return res.status(400).send({ status: false, message: 'lname is Required' })
         }
@@ -348,13 +255,13 @@ const updateUserProfile = async (req, res) => {
             }
         }
         //phone validation
-        if (!validator.validString(phone)) {
-            return res.status(400).send({ status: false, message: 'phone number is Required' })
-        }
+
+        
+             if (!validator.validString(phone)) {
+            return res.status(400).send({ status: false, message: 'phone number can not be empty' })
+         }
         if (phone) {
-            if (!validator.isValid(phone)) {
-                return res.status(400).send({ status: false, message: "Invalid request parameter, please provide Phone number." })
-            }
+
             if (!/^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6789]\d{9}$/.test(phone)) {
                 return res.status(400).send({ status: false, message: `Please enter a valid Indian phone number.` });
             }
@@ -363,94 +270,7 @@ const updateUserProfile = async (req, res) => {
                 return res.status(400).send({ status: false, message: `Unable to update phone. ${phone} is already registered.` });
             }
         }
-        //pasword validation and setting range of password.
-        if (!validator.validString(password)) {
-            return res.status(400).send({ status: false, message: 'password is Required' })
-        }
-        let tempPassword = password
-        if (tempPassword) {
-            if (!validator.isValid(tempPassword)) {
-                return res.status(400).send({ status: false, message: "Invalid request parameter, please provide password" })
-            }
-            if (!(tempPassword.length >= 8 && tempPassword.length <= 15)) {
-                return res.status(400).send({ status: false, message: "Password should be Valid min 8 and max 15 " })
-            }
-            var encryptedPassword = await bcrypt.hash(tempPassword, saltRounds)
-        }
-        //Address validation ->
-        if (address) {
-            //converting shipping address to string them parsing it.
-            let shippingAddressToString = JSON.stringify(address)
-            let parsedShippingAddress = JSON.parse(shippingAddressToString)
-
-            if (validator.isValidRequestBody(parsedShippingAddress)) {
-                if (parsedShippingAddress.hasOwnProperty('shipping')) {
-                    if (parsedShippingAddress.shipping.hasOwnProperty('street')) {
-                        if (!validator.isValid(parsedShippingAddress.shipping.street)) {
-                            return res.status(400).send({ status: false, message: " Invalid request parameters. Please provide shipping address's Street" });
-                        }
-                    }
-                    if (parsedShippingAddress.shipping.hasOwnProperty('city')) {
-                        if (!validator.isValid(parsedShippingAddress.shipping.city)) {
-                            return res.status(400).send({ status: false, message: " Invalid request parameters. Please provide shipping address's City" });
-                        }
-                    }
-                    if (parsedShippingAddress.shipping.hasOwnProperty('pincode')) {
-                        if (!validator.isValid(parsedShippingAddress.shipping.pincode)) {
-                            return res.status(400).send({ status: false, message: " Invalid request parameters. Please provide shipping address's pincode" });
-                        }
-                    }
-
-                    //using var to use these variables outside this If block.
-                    var shippingStreet = address.shipping.street
-                    var shippingCity = address.shipping.city
-                    var shippingPincode = address.shipping.pincode
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. Shipping address cannot be empty" });
-            }
-        }
-        if (address) {
-            //converting billing address to string them parsing it.
-            let billingAddressToString = JSON.stringify(address)
-            let parsedBillingAddress = JSON.parse(billingAddressToString)
-
-            if (validator.isValidRequestBody(parsedBillingAddress)) {
-                if (parsedBillingAddress.hasOwnProperty('billing')) {
-                    if (parsedBillingAddress.billing.hasOwnProperty('street')) {
-                        if (!validator.isValid(parsedBillingAddress.billing.street)) {
-                            return res.status(400).send({ status: false, message: " Invalid request parameters. Please provide billing address's Street" });
-                        }
-                    }
-                    if (parsedBillingAddress.billing.hasOwnProperty('city')) {
-                        if (!validator.isValid(parsedBillingAddress.billing.city)) {
-                            return res.status(400).send({ status: false, message: " Invalid request parameters. Please provide billing address's City" });
-                        }
-                    }
-                    if (parsedBillingAddress.billing.hasOwnProperty('pincode')) {
-                        if (!validator.isValid(parsedBillingAddress.billing.pincode)) {
-                            return res.status(400).send({ status: false, message: " Invalid request parameters. Please provide billing address's pincode" });
-                        }
-                    }
-
-                    //using var to use these variables outside this If block.
-                    var billingStreet = address.billing.street
-                    var billingCity = address.billing.city
-                    var billingPincode = address.billing.pincode
-                }
-            } else {
-                return res.status(400).send({ status: false, message: " Invalid request parameters. Billing address cannot be empty" });
-            }
-        }
-        //validating user's profile image.
-        if (files) {
-            if (validator.isValidRequestBody(files)) {
-                if (!(files && files.length > 0)) {
-                    return res.status(400).send({ status: false, message: "Invalid request parameter, please provide profile image" })
-                }
-                var updatedProfileImage = await uploadFile(files[0])
-            }
-        }
+      
         //Validation ends
 
         //object destructuring for response body.
@@ -459,15 +279,8 @@ const updateUserProfile = async (req, res) => {
                 fname: fname,
                 lname: lname,
                 email: email,
-                profileImage: updatedProfileImage,
-                phone: phone,
-                password: encryptedPassword,
-                'address.shipping.street': shippingStreet,
-                'address.shipping.city': shippingCity,
-                'address.shipping.pincode': shippingPincode,
-                'address.billing.street': billingStreet,
-                'address.billing.city': billingCity,
-                'address.billing.pincode': billingPincode
+               phone: phone
+            
             }
         }, { new: true })
         return res.status(200).send({ status: true, data: changeProfileDetails })
