@@ -26,6 +26,5 @@ app.listen(process.env.PORT || 3000, function () {
     console.log('Express app running on port ' + (process.env.PORT || 3000))
 });
 
-//mongodb+srv://monty-python:SnYUEY4giV9rekw@functionup-backend-coho.0zpfv.mongodb.net/Sourav_db?retryWrites=true&w=majority
 
-//mongodb+srv://monty-python:SnYUEY4giV9rekw@functionup-backend-coho.0zpfv.mongodb.net/Hercules_group11?retryWrites=true&w=majority
+

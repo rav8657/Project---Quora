@@ -3,7 +3,7 @@ const router = express.Router()
 
 const userController = require('../controllers/userController')
 const questionController = require('../controllers/questionController')
-//const answerController = require('../controllers/answerController')
+const answerController = require('../controllers/answerController')
 
 const MW = require('../middlewares/authMiddleware')
 
@@ -25,19 +25,11 @@ router.delete('/questions/:questionId',MW.userAuth, questionController.deleteQue
 
 
 
-
-
-
-
-
-
-
-
 // //*...... ANSWER SECTION APIs
-// router.post('/answer', MW.userAuth, answerController.createAnswer)
-// router.get('/questions/:questionId/answers/:answerId',  answerController.getAnswer)
-// router.put('/answer', MW.userAuth, answerController.updateAnswer)
-// router.delete('/answer', MW.userAuth, answerController.deleteAnswer)
+router.post('/answer', MW.userAuth, answerController.createAnswer)
+router.get('/questions/:questionId/answer',  answerController.getAnswer)
+router.put('/answer/:answerId', MW.userAuth, answerController.updateAnswer)
+router.delete('/answers/:answerId', MW.userAuth, answerController.deleteAnswer)
 
 
 
