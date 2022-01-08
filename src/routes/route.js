@@ -20,14 +20,14 @@ router.put('/user/:userId/profile', MW.userAuth, userController.updateUserProfil
 router.post('/question', MW.userAuth, questionController.createQuestion)
 router.get('/questions', questionController.getAllQuestions)
 router.get('/questions/:questionId', questionController.getQuestionById)
-router.put('/questions/:questionId',MW.userAuth, questionController.updateQuestion)
-router.delete('/questions/:questionId',MW.userAuth, questionController.deleteQuestion)
+router.put('/questions/:questionId', MW.userAuth, questionController.updateQuestion)
+router.delete('/questions/:questionId', MW.userAuth, questionController.deleteQuestion)
 
 
 
 // //*...... ANSWER SECTION APIs
 router.post('/answer', MW.userAuth, answerController.createAnswer)
-router.get('/questions/:questionId/answer',  answerController.getAnswer)
+router.get('/questions/:questionId/answer', answerController.getAllAnswers)
 router.put('/answer/:answerId', MW.userAuth, answerController.updateAnswer)
 router.delete('/answers/:answerId', MW.userAuth, answerController.deleteAnswer)
 
