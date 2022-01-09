@@ -168,7 +168,9 @@ const updateQuestion = async function (req, res) {
 
         //validation starts.
         let requestBody = req.body
+
         const { tag, description } = requestBody
+
         if (!validator.isValidObjectId(questionId)) {
             return res.status(400).send({status: false, message: `${questionId} is not a valid question id`});
         }
@@ -205,8 +207,8 @@ const updateQuestion = async function (req, res) {
             const tagArr = tag.split(",").map((x) => x.trim());
             const uniqueTagArr = [...new Set(tagArr)]; //we use ...new set for unique values in Array
             if (Array.isArray(tagArr)) {
-                questionData['addToSet'] = {}
-                questionData["tag"] = uniqueTagArr;
+                questionData['$addToSet'] = {}
+                questionData['$addToSet']["tag"] = uniqueTagArr;
             }
         }
         questionData.updatedAt = new Date();

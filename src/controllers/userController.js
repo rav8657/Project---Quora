@@ -175,7 +175,7 @@ const getUserProfile = async (req, res) => {
         }
 
         return res.status(200).send({ status: true, message: "Profile found successfully.", data: findUserProfile })
-        
+
     } catch (err) {
         return res.status(500).send({status: false,message: "Error is: " + err.message})
     }
@@ -212,7 +212,7 @@ const updateUserProfile = async (req, res) => {
         }
 
         // Extract params
-        let { fname, lname, email, phone } = requestBody;
+        let { fname, lname, email, phone} = requestBody;
 
         //validating user's firstName
         if (!validator.validString(fname)) {
@@ -258,6 +258,8 @@ const updateUserProfile = async (req, res) => {
                 return res.status(400).send({ status: false, message: `${phone} is already registered. Plaese try another number.` });
             }
         }
+
+        // if(password){return res.status(400).send({ status:false, message:`Password is not changeable.`})}
 
         //object destructuring for response body.
         let changeProfileDetails = await userModel.findOneAndUpdate({ _id: userId }, {
