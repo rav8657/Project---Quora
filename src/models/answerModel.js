@@ -19,7 +19,7 @@ const answerSchema = new mongoose.Schema({
         ref: 'Question_Project6',
         required: true
     },
-    deletedAt: { type: Date, default: null },
+    deletedAt: { type: Date },
 
     isDeleted: { type: Boolean, default: false },
 

@@ -3,7 +3,7 @@ const userModel = require("../models/userModel");
 const questionModel = require("../models/questionModel");
 const answerModel = require("../models/answerModel");
 
-
+//........................................................................
 //Post Question
 
 const createQuestion = async (req, res) => {
@@ -52,7 +52,7 @@ const createQuestion = async (req, res) => {
 
         if (tag) {
             const tagArr = tag.split(",").map((x) => x.trim());
-            const uniqueTagArr = [...new Set(tagArr)];
+            const uniqueTagArr = [...new Set(tagArr)];  //we use ...new set for unique values in Array
             if (Array.isArray(tagArr)) {
                 questionData["tag"] = uniqueTagArr;
             }
@@ -72,85 +72,87 @@ const createQuestion = async (req, res) => {
 };
 
 
-//!............................
-//Get Questions.
+//!................................................
+//Fetch all questions with their answers.
 const getAllQuestions = async (req, res) => {
     try {
-        let filterQuery = { isDeleted: false };
-        let queryParams = req.query;
-        let { tag, sort } = queryParams;
-        if (validator.isValidRequestBody(queryParams)) {
-            if (validator.isValid(tag)) {
-                let tagsArray = tag.split(",").map((x) => x.trim());
-                filterQuery["tag"] = { $all: tagsArray };
-            }
-            if (!validator.validString(tag)) {
-                return res.status(400).send({ status: false, message: "Tag is required." });
-            }
-            if (!validator.validString(sort)) {
-                return res.status(400).send({ status: false, message: "Sort is required." });
-            }
-            if (sort) {
-                if (!(sort == "ascending" || sort == "descending")) {
-                    return res.status(400).send({ message: "Either ascending or descending is accepted." });
-                }
+      let filterQuery = { isDeleted: false };
+      let queryParams = req.query;
+      let { tag, sort } = queryParams;
 
-                const sortedQuestions = await questionModel.find(filterQuery).sort({ createdAt: sort });
-
-                if (Array.isArray(sortedQuestions) && sortedQuestions.length === 0) {
-                    return res.status(404).send({ status: false, message: "No Questions found" });
-                }
-                return res.status(200).send({ status: true, message: "Questions list", data: sortedQuestions });
-            }
-            const findQuestionsByTag = await questionModel.find(filterQuery);
-
-            return res.status(200).send({status: true,msg: "Questions List",data: findQuestionsByTag});
+      if (validator.isValidRequestBody(queryParams)) {
+          
+        if (validator.isValid(tag)) {
+          let tagsArray = tag.split(",").map((x) => x.trim());
+          filterQuery["tag"] = { $all: tagsArray };
         }
-        return res.status(400).send({ status: false, message: "Empty body." });
 
+        if (!validator.validString(tag)) {
+          return res.status(400).send({ status: false, message: "Tag is required." });
+        }
+
+        if (!validator.validString(sort)) {
+          return res.status(400).send({ status: false,message: "Sort is required." });
+        }
+
+        if (sort) {
+          if ( !(sort.toLowerCase() == "ascending" || sort.toLowerCase() == "descending" ) ) {
+            return res.status(400).send({ message: `Only 'ascending' & 'descending' are allowed to sort.`});
+          }
+          if (sort.toLowerCase() === "ascending") { var sortValue = 1; }
+          if (sort.toLowerCase() === "descending") {var sortValue = -1; }
+
+        }
+        
+        let findQuestionsByTag = await questionModel.find(filterQuery).lean().sort({ createdAt: sortValue }).select({ createdAt: 0, updatedAt: 0, __v: 0 });
+        
+        for (i in findQuestionsByTag) {
+          let answer = await answerModel.find({ questionId: findQuestionsByTag[i]._id }).select({ text: 1, answeredBy: 1 });
+       
+          findQuestionsByTag[i].answers = answer;
+       
+        }
+        if (findQuestionsByTag.length == 0) {
+          return res.status(400).send({status: false, message: `No Question found by tag - ${tag}` });
+        }
+        return res.status(200).send({ status: true, message: "Questions List", data: findQuestionsByTag });
+      }
+      return res.status(400).send({status: false, message: "No filters provided to search questions." });
     } catch (err) {
-        return res.status(500).send({ status: false, message: err.message });
+      return res.status(500).send({ Error: err.message });
     }
-};
+  }
 
 //!..........................................................................
+
 const getQuestionById = async function (req, res) {
     try {
         const questionId = req.params.questionId;
+
     //Validation for the question Id.
+
     if (!validator.isValidObjectId(questionId)) {
-      return res.status(400).send({
-        status: false,
-        message: `${questionId} is not a valid question id`,
-      });
+      return res.status(400).send({status: false, message: `${questionId} is not a valid question id`});
     }
-    const findQuestion = await questionModel.findOne({
-      _id: questionId,
-      isDeleted: false,
-    });
+    const findQuestion = await questionModel.findOne({_id: questionId, isDeleted: false});
+
     if (!findQuestion) {
-      return res.status(404).send({
-        status: false,
-        message: `No questions exists by ${questionId}`,
-      });
+      return res.status(404).send({status: false, message: `No questions exists by ${questionId}`});
     }
-    const findAnswersOfThisQuestion = await answerModel
-      .find({ questionId: questionId })
-      .sort({ createdAt: -1 }).select({createdAt: 0,updatedAt: 0,__v:0});
+    const findAnswersOfThisQuestion = await answerModel.find({ questionId: questionId }).sort({ createdAt: -1 }).select({createdAt: 0,updatedAt: 0,__v:0});
+
       const description = findQuestion.description;
       const tag = findQuestion.tag;
       const askedBy = findQuestion.askedBy;
+
     const structureForResponseBody = {
       description,
       tag,
       askedBy,
       answers: findAnswersOfThisQuestion,
     };
-    return res.status(200).send({
-      status: true,
-      message: "Question fetched successfully.",
-      data: structureForResponseBody,
-    });
+
+    return res.status(200).send({status: true,message: "Question fetched successfully.",data: structureForResponseBody});
 
     } catch (err) {
         return res.status(500).send({ status: false, message: "Error is : " + err })}
@@ -163,6 +165,7 @@ const updateQuestion = async function (req, res) {
     try {
         const questionId = req.params.questionId;
         const userIdFromToken = req.userId;
+
         //validation starts.
         let requestBody = req.body
         const { tag, description } = requestBody
@@ -185,7 +188,7 @@ const updateQuestion = async function (req, res) {
         if (!question) {
             return res.status(404).send({ status: false, message: `question does not exit` });
         }
-        //Authentication & authorization
+        //*Authentication & authorization
         let userId = question.askedBy;
         if (userId != userIdFromToken) {
             res.status(401).send({ status: false, message: `Unauthorized access! User's info doesn't match` });
@@ -200,7 +203,7 @@ const updateQuestion = async function (req, res) {
         }
         if (tag) {
             const tagArr = tag.split(",").map((x) => x.trim());
-            const uniqueTagArr = [...new Set(tagArr)];
+            const uniqueTagArr = [...new Set(tagArr)]; //we use ...new set for unique values in Array
             if (Array.isArray(tagArr)) {
                 questionData['addToSet'] = {}
                 questionData["tag"] = uniqueTagArr;
@@ -221,48 +224,34 @@ const updateQuestion = async function (req, res) {
 const deleteQuestion = async function (req, res) {
     try {
         const questionId = req.params.questionId;
-    let userIdFromToken = req.userId;
+        let userIdFromToken = req.userId;
 
     //validation for questionId
     if (!validator.isValidObjectId(questionId)) {
-      return res.status(400).send({
-        status: false,
-        message: `${questionId} is not a valid question id`,
-      });
+      return res.status(400).send({ status: false, message: `${questionId} is not a valid question id`});
     }
 
-    const findQuestion = await questionModel.findOne({
-      _id: questionId,
-    });
+    const findQuestion = await questionModel.findOne({_id: questionId });
+    
     if (!findQuestion) {
-      return res.status(404).send({
-        status: false,
-        message: `Question not found for ${questionId}`,
-      });
+      return res.status(404).send({ status: false, message: `Question not found for ${questionId}` });
     }
 
-    //Authentication & authorization
+    //*Authentication & authorization
     let userId = findQuestion.askedBy;
     if (userId != userIdFromToken) {
-      return res.status(401).send({
-        status: false,
-        message: `Unauthorized access! ${userId} is not a logged in user.`,
-      });
+      return res.status(401).send({status: false, message: `Unauthorized access! ${userId} is not a logged in user.` });
     }
 
     if (findQuestion.isDeleted == true) {
-      return res
-        .status(404)
-        .send({ status: false, message: `Question has been already deleted.` });
+      return res.status(404).send({ status: false, message: `Question has been already deleted.` });
     }
 
-    await questionModel.findOneAndUpdate(
-      { _id: questionId },
-      { $set: { isDeleted: true, deletedAt: new Date() } }
+    await questionModel.findOneAndUpdate({ _id: questionId },{ $set: { isDeleted: true, deletedAt: new Date() } }
     );
-    return res
-      .status(204)
-      .send({ status: true, message: `Question deleted successfully.` });
+
+    return res.status(204).send({ status: true, message: `Question deleted successfully.` });
+
     } catch (err) {
         return res.status(500).send({ status: false, message: "Error is : " + err })
     }
