@@ -8,7 +8,6 @@ const answerController = require('../controllers/answerController')
 const MW = require('../middlewares/authMiddleware')
 
 
-
 //*...... USER SECTION APIs
 router.post('/register', userController.register)
 router.post('/login', userController.login)

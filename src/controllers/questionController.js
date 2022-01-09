@@ -26,7 +26,7 @@ const createQuestion = async (req, res) => {
         if (!validator.validString(tag)) {
             return res.status(400).send({ status: false, message: "Tag is required.", });
         }
-        //Authorization
+        //Authorization 
         if (askedBy != userIdFromToken) {
             return res.status(401).send({ status: false, message: `Unauthorized access! User's info doesn't match` });
         }
@@ -232,7 +232,7 @@ const deleteQuestion = async function (req, res) {
     }
 
     const findQuestion = await questionModel.findOne({_id: questionId });
-    
+
     if (!findQuestion) {
       return res.status(404).send({ status: false, message: `Question not found for ${questionId}` });
     }

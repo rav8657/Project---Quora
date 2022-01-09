@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken')
 
 const register = async function (req, res) {
     try {
-        
+
         let requestBody = req.body
 
         //Extract body
@@ -42,21 +42,21 @@ const register = async function (req, res) {
         if (isEmailAlredyPresent) {
             return res.status(400).send({ status: false, message: `Email Already Present` });
         }
-       
+
         if (!validator.validString(phone)) {
             return res.status(400).send({ status: false, message: "Invalid request parameter, please provide Phone" });
         }
         //validating phone number of 10 digits only.
-        if(phone ){
-        if (!/^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6789]\d{9}$/.test(phone)) {
-            return res.status(400).send({ status: false, message: `Mobile should be a valid number` });
+        if (phone) {
+            if (!/^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6789]\d{9}$/.test(phone)) {
+                return res.status(400).send({ status: false, message: `Mobile should be a valid number` });
+            }
+            //searching phone in DB to maintain its uniqueness
+            let isPhoneAlredyPresent = await userModel.findOne({ phone: phone })
+            if (isPhoneAlredyPresent) {
+                return res.status(400).send({ status: false, message: `Phone Number Already Present` });
+            }
         }
-        //searching phone in DB to maintain its uniqueness
-        let isPhoneAlredyPresent = await userModel.findOne({ phone: phone })
-        if (isPhoneAlredyPresent) {
-            return res.status(400).send({ status: false, message: `Phone Number Already Present` });
-        }
-    }
         if (!validator.isValid(password)) {
             return res.status(400).send({ status: false, message: "Invalid request parameter, please provide password" });
         }
@@ -167,28 +167,19 @@ const getUserProfile = async (req, res) => {
 
         const findUserProfile = await userModel.findOne({ _id: userId })
         if (!findUserProfile) {
-            return res.status(400).send({
-                status: false, message: `User doesn't exists by ${userId}`
-            })
+            return res.status(400).send({status: false, message: `User doesn't exists by ${userId}`})
         }
-        //Checking the authorization of the user -> Whether user's Id matches with the creater's Id or not.
-        if (userIdFromToken != findUserProfile._id) {
-            return res.status(403).send({
-                status: false,
-                message: "Unauthorized access."
-            })
+          //*Authentication & Authorization
+        if (userId.toString() != userIdFromToken) {
+            return res.status(401).send({status: false, message: "Unauthorized access."})
         }
 
         return res.status(200).send({ status: true, message: "Profile found successfully.", data: findUserProfile })
+        
     } catch (err) {
-        return res.status(500).send({
-            status: false,
-            message: "Error is: " + err.message
-        })
+        return res.status(500).send({status: false,message: "Error is: " + err.message})
     }
 }
-
-
 
 //..................................................................
 //Update profile details by validating user details.
@@ -196,82 +187,77 @@ const getUserProfile = async (req, res) => {
 const updateUserProfile = async (req, res) => {
 
     try {
-       
-        let requestBody = req.body
-        let userId = req.params.userId
-        let userIdFromToken = req.userId
 
-        //Validation starts.
+        let requestBody = req.body;
+        let userId = req.params.userId;
+        let userIdFromToken = req.userId;
+
+        //Validating userId
         if (!validator.isValidObjectId(userId)) {
-            res.status(400).send({ status: false, message: `${userId} is not a valid user id` })
-            return
-        }
-        if (!validator.isValidObjectId(userIdFromToken)) {
-            return res.status(400).send({ status: false, message: `Unauthorized access! User's info doesn't match ` })
-        }
-        const findUserProfile = await userModel.findOne({ _id: userId })
-        if (!findUserProfile) {
-            return res.status(400).send({
-                status: false,
-                message: `User doesn't exists by ${userId}`
-            })
+            return res.status(400).send({ status: false, message: "Invalid userId in params." });
         }
 
-        //*Authentication & authorization
-        if (findUserProfile._id.toString() != userIdFromToken) {
-            res.status(401).send({ status: false, message: `Unauthorized access! User's info doesn't match` });
-            return
+        //*Authentication & Authorization
+        if (userId.toString() != userIdFromToken) {
+            return res.status(401).send({ status: false, message: `Unauthorized access! ${userId} is not a logged in user.` });
         }
+
+        const findUserProfile = await userModel.findOne({ _id: userId });
+
+        if (!findUserProfile) { return res.status(400).send({ status: false, message: `User doesn't exists by ${userId}` }) }
+
+        //Validating request body
+        if (!validator.isValidRequestBody(requestBody)) {
+            return res.status(400).send({ status: false, message: "Invalid request body! Please provide some user's information to update." });
+        }
+
         // Extract params
         let { fname, lname, email, phone } = requestBody;
 
-        //validations for updatation details.
+        //validating user's firstName
         if (!validator.validString(fname)) {
-            return res.status(400).send({ status: false, message: 'fname is Required' })
+            return res.status(400).send({ status: false, message: `Invalid request parameters, Cannot update first name to empty string.` });
         }
-        
+
+        //Validating user's lastName
         if (!validator.validString(lname)) {
-            return res.status(400).send({ status: false, message: 'lname is Required' })
+            return res.status(400).send({ status: false, message: `Invalid request parameters, Cannot update last name to empty string.` });
         }
-        if (lname) {
-            if (!validator.isValid(lname)) {
-                return res.status(400).send({ status: false, message: "Invalid request parameter, please provide lname" })
-            }
-        }
-        //email validation
+
+        //validating email address
         if (!validator.validString(email)) {
-            return res.status(400).send({ status: false, message: 'email is Required' })
+            return res.status(400).send({ status: false, message: `Invalid request parameters, Cannot update Email Id to empty string.` });
         }
+
         if (email) {
-            if (!validator.isValid(email)) {
-                return res.status(400).send({ status: false, message: "Invalid request parameter, please provide email" })
-            }
             if (!/^\w+([\.-]?\w+)@\w+([\.-]?\w+)(\.\w{2,3})+$/.test(email)) {
-                return res.status(400).send({ status: false, message: `Email should be a valid email address` });
+                return res.status(400).send({ status: false, message: `${email} is an invalid email Id. Plaese enter a valid email Id to update.` });
             }
-            let isEmailAlredyPresent = await userModel.findOne({ email: email })
-            if (isEmailAlredyPresent) {
-                return res.status(400).send({ status: false, message: `Unable to update email. ${email} is already registered.` });
+
+            const isEmailAlreadyUsed = await userModel.findOne({ email });
+            if (isEmailAlreadyUsed) {
+                return res.status(400).send({ status: false, message: `${email} is already registered. Plaese try another Email Id.` });
             }
         }
-        //phone validation
 
-        
-             if (!validator.validString(phone)) {
-            return res.status(400).send({ status: false, message: 'phone number can not be empty' })
-         }
+        //validating phone Number
+        if (!validator.validString(phone)) {
+            return res.status(400).send({
+                status: false,
+                message: `Invalid request parameters, Cannot update phone Number to empty string.`,
+            });
+        }
         if (phone) {
-
             if (!/^(?:(?:\+|0{0,2})91(\s*[\-]\s*)?|[0]?)?[6789]\d{9}$/.test(phone)) {
-                return res.status(400).send({ status: false, message: `Please enter a valid Indian phone number.` });
+                return res.status(400).send({ status: false, message: `${phone} is not a valid phone number. Please enter a valid Indian number to update.` });
             }
-            let isPhoneAlredyPresent = await userModel.findOne({ phone: phone })
-            if (isPhoneAlredyPresent) {
-                return res.status(400).send({ status: false, message: `Unable to update phone. ${phone} is already registered.` });
+
+            const isPhoneAlreadyUsed = await userModel.findOne({ phone });
+
+            if (isPhoneAlreadyUsed) {
+                return res.status(400).send({ status: false, message: `${phone} is already registered. Plaese try another number.` });
             }
         }
-      
-        //Validation ends
 
         //object destructuring for response body.
         let changeProfileDetails = await userModel.findOneAndUpdate({ _id: userId }, {
@@ -279,22 +265,22 @@ const updateUserProfile = async (req, res) => {
                 fname: fname,
                 lname: lname,
                 email: email,
-               phone: phone
-            
+                phone: phone
             }
         }, { new: true })
+
         return res.status(200).send({ status: true, data: changeProfileDetails })
+
     } catch (err) {
-        return res.status(500).send({
-            status: false,
-            message: "Error is: " + err.message
-        })
+        return res.status(500).send({ status: false, message: "Error is: " + err.message })
     }
 }
 
-
 module.exports = {
-    register, login, getUserProfile, updateUserProfile
+    register,
+    login,
+    getUserProfile,
+    updateUserProfile
 }
 
 
