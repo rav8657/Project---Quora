@@ -187,6 +187,11 @@ const deleteAnswer = async function (req, res) {
         if (!findAnswer) {
           return res.status(404).send({status: false, message: `No answer exists by ${answerId} or has been already deleted.`});
         }
+        
+        if (findAnswer.answeredBy != answeredBy) {
+        return res.status(400).send({status:false,message:`Unable to delete the answer because it is not answered by you.`})
+       }
+
         if (findAnswer.answeredBy == answeredBy) {
           await answerModel.findOneAndUpdate( { _id: answerId }, { $set: { isDeleted: true } });
         }

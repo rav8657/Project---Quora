@@ -84,7 +84,7 @@ const getAllQuestions = async (req, res) => {
           
         if (validator.isValid(tag)) {
           let tagsArray = tag.split(",").map((x) => x.trim());
-          filterQuery["tag"] = { $all: tagsArray };
+          filterQuery["tag"] = { $all: tagsArray };      //$all => it returns a document in in which statisfied all the condition.
         }
 
         if (!validator.validString(tag)) {
@@ -105,7 +105,8 @@ const getAllQuestions = async (req, res) => {
         }
         
         let findQuestionsByTag = await questionModel.find(filterQuery).lean().sort({ createdAt: sortValue }).select({ createdAt: 0, updatedAt: 0, __v: 0 });
-        
+        //lean() -> It boost the DB query speed and it returns javascript object.
+
         for (i in findQuestionsByTag) {
           let answer = await answerModel.find({ questionId: findQuestionsByTag[i]._id }).select({ text: 1, answeredBy: 1 });
        
