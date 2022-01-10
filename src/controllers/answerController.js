@@ -150,26 +150,46 @@ const deleteAnswer = async function (req, res) {
         const params = req.params;
         const answerId = params.answerId;
         const userIdFromToken = req.userId;
+        let requestBody = req.body;
 
+        const { answeredBy, questionId } = requestBody;
+
+        //validation for request body
+        if (!validator.isValidRequestBody(requestBody)) {
+          return res.status(400).send({status: false,message: "Empty body.Please provide a request body to delete."});
+        }
         //validation for answerId
         if (!validator.isValidObjectId(answerId)) {
-            return res.status(400).send({ status: false, message: `${answerId} is not a valid answer id` });
+          return res.status(400).send({status: false,message: `${answerId} is not a valid answer id`});
         }
-
-        //Finding answer which has to be deleted.
-        const findAnswer = await answerModel.findOne({ _id: answerId, isDeleted: false });
-
-        if (!findAnswer) { return res.status(404).send({ status: false, message: `No answer found by ${answerId}` }) }
-
-        let answeredBy = findAnswer.answeredBy;
-
+         //validating empty answeredBy id.
+         if (!validator.isValid(answeredBy)) {
+          return res.status(400).send({status: false, message: `answeredBy is required to delete the answer.`});
+        }
+        if (!validator.isValidObjectId(answeredBy)) {
+          return res.status(400).send({
+            status: false,message: `${answeredBy} is not a valid answeredBy id`});
+        }
+        //validating empty questionId
+        if (!validator.isValid(questionId)) {
+          return res.status(400).send({status: false, message: `questionId is required to delete the answer.`});
+        }
+        if (!validator.isValidObjectId(questionId)) {
+          return res.status(400).send({status: false, message: `${questionId} is not a valid question id`});
+        }
         //Authentication & Authorization
         if (answeredBy != userIdFromToken) {
-            return res.status(401).send({ status: false, message: `Unauthorized access! ${answeredBy} is not a logged in user.` });
+          return res.status(401).send({status: false,message: `Unauthorized access! ${answeredBy} is not a logged in user.`});
         }
-
-        await answerModel.findOneAndUpdate({ _id: answerId }, { $set: { isDeleted: true, deletedAt: new Date() } });
-
+        //Finding answer which has to be delete.
+        const findAnswer = await answerModel.findOne({ _id: answerId,isDeleted: false});
+        
+        if (!findAnswer) {
+          return res.status(404).send({status: false, message: `No answer exists by ${answerId} or has been already deleted.`});
+        }
+        if (findAnswer.answeredBy == answeredBy) {
+          await answerModel.findOneAndUpdate( { _id: answerId }, { $set: { isDeleted: true } });
+        }
         return res.status(200).send({ status: true, message: `Answer deleted successfully.` });
 
     } catch (err) {

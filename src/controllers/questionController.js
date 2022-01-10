@@ -72,7 +72,7 @@ const createQuestion = async (req, res) => {
 };
 
 
-//!................................................
+//!...............................................................
 //Fetch all questions with their answers.
 const getAllQuestions = async (req, res) => {
     try {
@@ -206,9 +206,9 @@ const updateQuestion = async function (req, res) {
         if (tag) {
             const tagArr = tag.split(",").map((x) => x.trim());
             const uniqueTagArr = [...new Set(tagArr)]; //we use ...new set for unique values in Array
-            if (Array.isArray(tagArr)) {
+            if (Array.isArray(tagArr)) {       //The Array.isArray() method determines whether the passed value is an Array
                 questionData['$addToSet'] = {}
-                questionData['$addToSet']["tag"] = uniqueTagArr;
+                questionData['$addToSet']['tag'] = uniqueTagArr;
             }
         }
         questionData.updatedAt = new Date();
